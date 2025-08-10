@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from django_coolify.client import CoolifyClient, CoolifyAPIError
 from django_coolify.config import CoolifyConfig
+from django_coolify.utils import generate_domain_name
 
 
 class Command(BaseCommand):
@@ -113,16 +114,61 @@ class Command(BaseCommand):
         app_uuid = self._setup_application(client, config, options['force'])
         config['app_uuid'] = app_uuid
         
-        # Step 4: Save updated configuration
+        # Step 4: Generate and set domain
+        if not config.get('domains'):
+            # Get the port from config, default to 8000 for Django
+            port = int(config.get('ports_exposes', 8000))
+            generated_domain = generate_domain_name(config['app_name'], config['coolify_url'], port)
+            config['domains'] = generated_domain
+            self.stdout.write(f"Generated domain: {generated_domain}")
+        
+        # Set domain on the application
+        try:
+            # Update application with domain (Coolify expects https:// prefix with port)
+            settings = {"domains": config['domains']}
+            client.update_application_settings(app_uuid, settings)
+            self.stdout.write(f"✓ Set application domain: {config['domains']}")
+        except CoolifyAPIError as e:
+            self.stdout.write(
+                self.style.WARNING(f"Warning: Could not set application domain: {e}")
+            )
+            # Try alternative domain setting approach
+            try:
+                client.set_application_domain(app_uuid, config['domains'])
+                self.stdout.write(f"✓ Set application domain (alternative method): {config['domains']}")
+            except CoolifyAPIError as e2:
+                self.stdout.write(
+                    self.style.WARNING(f"Warning: Could not set domain with alternative method: {e2}")
+                )
+        
+        # Also set domain as environment variable for Django ALLOWED_HOSTS (without https:// and port)
+        try:
+            # Remove https:// prefix and port for ALLOWED_HOSTS env var
+            domain_for_django = config['domains'].replace('https://', '').replace('http://', '')
+            # Remove port if present (e.g., "example.com:8000" -> "example.com")
+            if ':' in domain_for_django:
+                domain_for_django = domain_for_django.split(':')[0]
+            client.set_environment_variable(app_uuid, 'ALLOWED_HOSTS', domain_for_django)
+            self.stdout.write(f"✓ Set ALLOWED_HOSTS environment variable: {domain_for_django}")
+        except CoolifyAPIError as e:
+            self.stdout.write(
+                self.style.WARNING(f"Warning: Could not set ALLOWED_HOSTS env var: {e}")
+            )
+        
+        # Step 5: Save updated configuration
         config_manager.save(config)
         
         self.stdout.write(self.style.SUCCESS("Infrastructure setup completed!"))
         self.stdout.write(f"Project UUID: {project_uuid}")
         self.stdout.write(f"Application UUID: {app_uuid}")
         self.stdout.write(f"Server UUID: {server_uuid}")
+        if config.get('domains'):
+            self.stdout.write(f"Domain: {config['domains']}")
         self.stdout.write("\nNext steps:")
         self.stdout.write("1. Review the application settings in Coolify dashboard")
         self.stdout.write("2. Run 'python manage.py deploy' to deploy your application")
+        if config.get('domains'):
+            self.stdout.write(f"3. Your application will be available at: https://{config['domains']}")
     
     def _setup_project(self, client, config, force):
         """Create or find project"""

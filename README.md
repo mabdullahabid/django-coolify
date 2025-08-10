@@ -1,15 +1,17 @@
 # Django Coolify
 
-Easy Django deployment to Coolify with minimal configuration.
+Easy Django deployment to Coolify with minimal configuration and automated domain management.
 
 ## Features
 
-- Simple Django integration with Coolify
-- Automatic Docker configuration generation
-- Git-based deployments for public repositories
-- SQLite support with persistent volumes
-- Health check integration
-- Environment variable management
+- 🚀 **Simple Django integration** with Coolify
+- 🐳 **Automatic Docker configuration** generation with uv support
+- 🌐 **Smart domain management** with automatic port mapping
+- 🔄 **Git-based deployments** for public repositories  
+- 💾 **SQLite support** with persistent volumes
+- ❤️ **Health check integration** with automatic endpoint setup
+- 🔧 **Environment variable automation** including ALLOWED_HOSTS
+- 📡 **Full Coolify API integration** for seamless deployment workflow
 
 ## Installation
 
@@ -126,6 +128,34 @@ python manage.py deploy --no-push
 - `--branch`: Deploy specific branch (overrides config)
 - `--tag`: Deploy specific tag instead of branch
 
+### `set_domain`
+
+Set or update the domain for your application with automatic port mapping.
+
+```bash
+# Generate and set a new domain automatically
+python manage.py set_domain
+
+# Set a specific domain  
+python manage.py set_domain --domain https://myapp.example.com:8000
+
+# Force regenerate domain (overwrite existing)
+python manage.py set_domain --force
+
+# Generate domain with specific port
+python manage.py set_domain --force  # Uses port from ports_exposes config
+```
+
+**Options:**
+- `--domain`: Specific domain to set (include https:// prefix and port)
+- `--force`: Force regeneration of domain (overwrite existing configuration)
+
+**Features:**
+- Automatically generates domains with port mapping (e.g., `:8000`)
+- Updates Coolify application settings via API
+- Saves domain to `coolify.json` configuration
+- Configures `ALLOWED_HOSTS` environment variable in Django
+
 ## Configuration
 
 The `coolify.json` file contains all the configuration for your deployment:
@@ -142,12 +172,18 @@ The `coolify.json` file contains all the configuration for your deployment:
   "git_repository": "https://github.com/username/repo",
   "git_branch": "main",
   "build_pack": "dockerfile",
-  "domains": "example.com,www.example.com",
+  "domains": "https://app.example.com:8000",
+  "ports_exposes": "8000",
   "environment_variables": {},
   "health_check_enabled": true,
   "health_check_path": "/health/"
 }
 ```
+
+**Note on Domains**: Domains are automatically generated with port mapping (e.g., `:8000`) to ensure proper routing to your Django application. You can specify multiple domains separated by commas, and include paths or specific ports as needed:
+- `https://app.coolify.io:8000` - Maps to port 8000 inside the container
+- `https://app.coolify.io,https://cloud.coolify.io/dashboard` - Multiple domains with paths
+- `https://app.coolify.io/api/v3` - Domain with specific path
 
 ## Django Settings for Production
 
@@ -258,6 +294,35 @@ The typical workflow for using django-coolify:
 - Currently supports only public Git repositories
 - Requires manual Coolify API token setup
 - SQLite database with volume mounting (PostgreSQL support planned)
+- **Domain setting**: Auto-generated domains are saved to config and set as environment variables, but may need to be manually set in the Coolify UI due to API limitations
+
+### Manual Domain Setup
+
+If the domain doesn't appear in your Coolify application after running `setup_infra`, you can:
+
+1. **Use the set_domain command**: `python manage.py set_domain`
+2. **Manual setup in Coolify UI**:
+   - Go to your application in Coolify dashboard
+   - Navigate to Configuration > General > Domains  
+   - Enter the domain from your `coolify.json` file
+   - Click "Set Direction" and save
+
+The domain is automatically saved to your `coolify.json` and set as an `ALLOWED_HOSTS` environment variable.
+
+## Changelog
+
+### v0.2.0 (Latest)
+- ✨ **Smart domain management**: Automatic domain generation with proper port mapping
+- 🔧 **Improved ALLOWED_HOSTS**: Correctly strips port numbers for Django configuration
+- 🐳 **Enhanced Docker support**: Better uv integration and dependency management
+- 📡 **Robust API integration**: Full CRUD operations with Coolify API
+- 🎯 **Port mapping**: Automatic `:8000` port mapping for container routing
+- 🔄 **Environment variables**: Better handling of existing vs new environment variables
+
+### v0.1.x
+- 🚀 Initial release with basic Coolify integration
+- 🐳 Docker configuration generation  
+- 📝 Management commands for deployment workflow
 
 ## Contributing
 

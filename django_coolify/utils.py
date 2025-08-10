@@ -7,6 +7,115 @@ from pathlib import Path
 from typing import Optional
 
 
+def auto_configure_django_settings(project_path: Optional[str] = None) -> bool:
+    """
+    Automatically configure Django settings for Coolify deployment
+    
+    Args:
+        project_path: Path to Django project root
+        
+    Returns:
+        True if settings were modified, False otherwise
+    """
+    if not project_path:
+        project_path = Path.cwd()
+    else:
+        project_path = Path(project_path)
+    
+    # Find settings.py file
+    settings_files = list(project_path.glob("*/settings.py"))
+    if not settings_files:
+        return False
+    
+    settings_file = settings_files[0]  # Take the first one found
+    
+    try:
+        with open(settings_file, 'r') as f:
+            content = f.read()
+        
+        lines = content.split('\n')
+        modified = False
+        
+        # Add STATIC_ROOT if not present
+        if 'STATIC_ROOT' not in content:
+            # Find STATIC_URL and add STATIC_ROOT after it
+            for i, line in enumerate(lines):
+                if line.strip().startswith("STATIC_URL"):
+                    lines.insert(i + 1, "STATIC_ROOT = BASE_DIR / 'staticfiles'")
+                    modified = True
+                    break
+        
+        # Add dynamic ALLOWED_HOSTS configuration
+        if 'os.getenv("ALLOWED_HOSTS")' not in content:
+            # Add import os if not present - find the right place after imports
+            if 'import os' not in content:
+                # Find the line after the last import statement
+                import_line_index = -1
+                for i, line in enumerate(lines):
+                    if line.startswith('from ') or line.startswith('import '):
+                        import_line_index = i
+                
+                if import_line_index >= 0:
+                    lines.insert(import_line_index + 1, 'import os')
+                    modified = True
+            
+            # Find ALLOWED_HOSTS and modify it
+            for i, line in enumerate(lines):
+                if line.strip().startswith('ALLOWED_HOSTS'):
+                    # Add environment variable support after ALLOWED_HOSTS definition
+                    lines.insert(i + 1, '')
+                    lines.insert(i + 2, '# Add dynamic allowed hosts from environment')
+                    lines.insert(i + 3, 'if os.getenv("ALLOWED_HOSTS"):')
+                    lines.insert(i + 4, '    ALLOWED_HOSTS.extend(os.getenv("ALLOWED_HOSTS").split(","))')
+                    modified = True
+                    break
+        
+        # Write back if modified
+        if modified:
+            with open(settings_file, 'w') as f:
+                f.write('\n'.join(lines))
+        
+        return modified
+        
+    except Exception as e:
+        print(f"Error configuring Django settings: {e}")
+        return False
+
+
+def generate_domain_name(app_name: str, coolify_url: str, port: int = 8000) -> str:
+    """
+    Generate a domain name for the application with port mapping
+    
+    Args:
+        app_name: Application name
+        coolify_url: Coolify instance URL
+        port: Port to map the domain to (default: 8000 for Django)
+        
+    Returns:
+        Generated domain name with https:// prefix and port mapping (required by Coolify API)
+    """
+    import urllib.parse
+    
+    # Parse the Coolify URL to get the base domain
+    parsed_url = urllib.parse.urlparse(coolify_url)
+    base_domain = parsed_url.netloc
+    
+    # Remove common prefixes from the base domain
+    if base_domain.startswith('coolify.'):
+        base_domain = base_domain[8:]  # Remove 'coolify.'
+    elif base_domain.startswith('app.'):
+        base_domain = base_domain[4:]   # Remove 'app.'
+    elif base_domain.startswith('my.'):
+        base_domain = base_domain[3:]   # Remove 'my.'
+    
+    # Generate domain: app-name.base-domain.com with port mapping
+    app_slug = app_name.lower().replace('_', '-').replace(' ', '-')
+    domain = f"{app_slug}.{base_domain}"
+    
+    # Coolify API requires https:// prefix and port mapping for internal routing
+    return f"https://{domain}:{port}"
+
+
 def create_dockerfile(project_path: Optional[str] = None) -> str:
     """
     Create a Dockerfile for Django application using uv

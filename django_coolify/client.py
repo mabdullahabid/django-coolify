@@ -213,3 +213,87 @@ class CoolifyClient:
             List of environments
         """
         return self._make_request("GET", f"/projects/{project_uuid}/environments")
+    
+    def set_environment_variable(self, app_uuid: str, key: str, value: str) -> Dict:
+        """
+        Set environment variable for an application
+        
+        Args:
+            app_uuid: Application UUID
+            key: Environment variable key
+            value: Environment variable value
+            
+        Returns:
+            Response data
+        """
+        data = {
+            "key": key,
+            "value": value,
+            "is_build_time": False,
+            "is_preview": False
+        }
+        
+        try:
+            # Try POST first (create new env var)
+            return self._make_request("POST", f"/applications/{app_uuid}/envs", data=data)
+        except CoolifyAPIError as e:
+            if "already exists" in str(e):
+                # If env var exists, try to update it with PATCH
+                try:
+                    # Get existing env vars to find the ID
+                    env_vars = self.list_environment_variables(app_uuid)
+                    env_var_id = None
+                    for env_var in env_vars:
+                        if env_var.get('key') == key:
+                            env_var_id = env_var.get('id')
+                            break
+                    
+                    if env_var_id:
+                        return self._make_request("PATCH", f"/applications/{app_uuid}/envs/{env_var_id}", data=data)
+                    else:
+                        raise CoolifyAPIError(f"Could not find existing environment variable: {key}")
+                except Exception as update_error:
+                    raise CoolifyAPIError(f"Failed to update existing environment variable: {update_error}")
+            else:
+                raise e
+    
+    def list_environment_variables(self, app_uuid: str) -> List[Dict]:
+        """
+        List environment variables for an application
+        
+        Args:
+            app_uuid: Application UUID
+            
+        Returns:
+            List of environment variables
+        """
+        return self._make_request("GET", f"/applications/{app_uuid}/envs")
+    
+    def set_application_domain(self, app_uuid: str, domain: str) -> Dict:
+        """
+        Set domain for an application
+        
+        Args:
+            app_uuid: Application UUID
+            domain: Domain to set
+            
+        Returns:
+            Response data
+        """
+        data = {
+            "domains": domain
+        }
+        return self._make_request("POST", f"/applications/{app_uuid}/domains", data=data)
+    
+    def update_application_settings(self, app_uuid: str, settings: Dict) -> Dict:
+        """
+        Update application settings
+        
+        Args:
+            app_uuid: Application UUID  
+            settings: Settings to update
+            
+        Returns:
+            Response data
+        """
+        return self._make_request("PATCH", f"/applications/{app_uuid}", data=settings)

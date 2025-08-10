@@ -1,6 +1,6 @@
 [project]
 name = "django-coolify"
-version = "0.1.1"
+version = "0.1.2"
 description = "Django integration for Coolify - easy deployment and management"
 readme = "README.md"
 requires-python = ">=3.12"

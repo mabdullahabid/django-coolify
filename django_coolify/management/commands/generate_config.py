@@ -4,7 +4,7 @@ Django management command to generate coolify.json configuration
 from django.core.management.base import BaseCommand, CommandError
 
 from django_coolify.config import CoolifyConfig
-from django_coolify.utils import ensure_docker_files, add_health_check_url
+from django_coolify.utils import ensure_docker_files, add_health_check_url, auto_configure_django_settings
 
 
 class Command(BaseCommand):
@@ -71,6 +71,16 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
+        # Auto-configure Django settings first
+        self.stdout.write("Auto-configuring Django settings...")
+        settings_modified = auto_configure_django_settings()
+        if settings_modified:
+            self.stdout.write(
+                self.style.SUCCESS("✓ Django settings updated for Coolify deployment")
+            )
+        else:
+            self.stdout.write("✓ Django settings already configured")
+        
         config_manager = CoolifyConfig()
         
         # Check if config already exists
