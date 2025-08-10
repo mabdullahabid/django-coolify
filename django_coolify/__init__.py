@@ -9,7 +9,7 @@ Features:
 - Git-based deployment workflow
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __author__ = "Abdullah Abid"
 __email__ = "abd@abd.dev"
 

@@ -27,7 +27,7 @@ class CoolifyConfig:
         "ports_exposes": "8000",
         "domains": "",
         "environment_variables": {},
-        "health_check_enabled": True,
+        "health_check_enabled": False,
         "health_check_path": "/health/"
     }
     

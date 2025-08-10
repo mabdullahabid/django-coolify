@@ -270,10 +270,8 @@ class Command(BaseCommand):
         if config.get('domains'):
             app_data['domains'] = config['domains']
         
-        if config.get('health_check_enabled'):
-            app_data['health_check_enabled'] = True
-            if config.get('health_check_path'):
-                app_data['health_check_path'] = config['health_check_path']
+        # Always disable health checks for simplicity
+        app_data['health_check_enabled'] = False
         
         try:
             app = client.create_public_application(**app_data)

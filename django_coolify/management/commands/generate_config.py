@@ -4,7 +4,7 @@ Django management command to generate coolify.json configuration
 from django.core.management.base import BaseCommand, CommandError
 
 from django_coolify.config import CoolifyConfig
-from django_coolify.utils import ensure_docker_files, add_health_check_url, auto_configure_django_settings
+from django_coolify.utils import ensure_docker_files, auto_configure_django_settings
 
 
 class Command(BaseCommand):
@@ -250,20 +250,4 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(
                 self.style.WARNING(f"Could not create Docker files: {e}")
-            )
-        
-        # Add health check URL
-        try:
-            added = add_health_check_url()
-            if added:
-                self.stdout.write(
-                    self.style.SUCCESS("✓ Health check URL added to Django project")
-                )
-            else:
-                self.stdout.write(
-                    self.style.WARNING("Health check URL already exists or could not be added")
-                )
-        except Exception as e:
-            self.stdout.write(
-                self.style.WARNING(f"Could not add health check URL: {e}")
             )

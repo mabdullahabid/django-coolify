@@ -9,9 +9,9 @@ Easy Django deployment to Coolify with minimal configuration and automated domai
 - 🌐 **Smart domain management** with automatic port mapping
 - 🔄 **Git-based deployments** for public repositories  
 - 💾 **SQLite support** with persistent volumes
-- ❤️ **Health check integration** with automatic endpoint setup
 - 🔧 **Environment variable automation** including ALLOWED_HOSTS
 - 📡 **Full Coolify API integration** for seamless deployment workflow
+- ⚡ **Simplified configuration** with health checks disabled by default for easier setup
 
 ## Installation
 
