@@ -49,11 +49,14 @@ RUN apt-get update \\
     && rm -rf /var/lib/apt/lists/* \\
     && curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Add uv to PATH
-ENV PATH="/root/.cargo/bin:$PATH"
+# Add uv to PATH (uv installs to /root/.local/bin)
+ENV PATH="/root/.local/bin:$PATH"
 
-# Copy dependency files
+# Copy dependency files and clean them for production
 COPY pyproject.toml uv.lock /app/
+
+# Remove local development dependencies for production build
+RUN sed -i '/^\\[tool\\.uv\\.sources\\]/,/^$/d' pyproject.toml
 
 # Install Python dependencies using uv
 RUN uv sync --frozen --no-dev

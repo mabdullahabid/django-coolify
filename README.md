@@ -149,6 +149,60 @@ The `coolify.json` file contains all the configuration for your deployment:
 }
 ```
 
+## Django Settings for Production
+
+For successful deployment, ensure your Django settings are production-ready:
+
+### Required Settings
+
+```python
+# settings.py
+
+# Static files - Required for collectstatic
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # or os.path.join(BASE_DIR, 'staticfiles')
+
+# Allow hosts - Configure for your domain
+ALLOWED_HOSTS = ['*']  # For testing, or ['yourdomain.com', 'www.yourdomain.com']
+
+# Optional: Health check endpoint (automatically added by django-coolify)
+# No additional configuration needed
+```
+
+### Recommended Settings
+
+```python
+# For better security in production
+import os
+
+# Use environment variables for sensitive data
+SECRET_KEY = os.environ.get('SECRET_KEY', 'your-fallback-secret-key')
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+# Database (SQLite with volume mount)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'data' / 'db.sqlite3',  # Matches Docker volume
+    }
+}
+
+# Logging (optional)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+```
+
 ## Docker Configuration
 
 The package automatically generates Docker-related files if they don't exist:
