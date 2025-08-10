@@ -336,7 +336,7 @@ def auto_configure_django_urls(project_path: Optional[str] = None) -> bool:
                 
                 if insert_line is not None:
                     # Insert before the closing bracket
-                    lines.insert(insert_line, "    path('', include('django_coolify.urls')),")
+                    lines.insert(insert_line, "    path('django-coolify/', include('django_coolify.urls')),")
                     modified = True
         
         # Write back if modified
@@ -457,7 +457,7 @@ EXPOSE 8000
 
 # Health check using curl (more reliable than requests)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \\
-    CMD curl -f http://localhost:8000/health/ || exit 1
+    CMD curl -f http://localhost:8000/django-coolify/health/ || exit 1
 
 # Start server
 CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]

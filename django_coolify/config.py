@@ -27,7 +27,7 @@ class CoolifyConfig:
         "domains": "",
         "environment_variables": {},
         "health_check_enabled": False,
-        "health_check_path": "/health/"
+        "health_check_path": "/django-coolify/health/"
     }
     
     # Sensitive fields that should be stored in .env file

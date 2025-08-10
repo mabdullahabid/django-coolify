@@ -103,8 +103,8 @@ class Command(BaseCommand):
             if ':' in domain_for_django:
                 domain_for_django = domain_for_django.split(':')[0]
             
-            # Include localhost and 0.0.0.0 for Docker and local development
-            allowed_hosts = f"{domain_for_django},localhost,0.0.0.0"
+            # Include localhost for Docker and local development
+            allowed_hosts = f"{domain_for_django},localhost"
             
             client.set_environment_variable(app_uuid, 'ALLOWED_HOSTS', allowed_hosts)
             self.stdout.write(f"✓ Set ALLOWED_HOSTS environment variable: {allowed_hosts}")

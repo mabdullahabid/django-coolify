@@ -178,7 +178,7 @@ Contains project settings that are safe to commit to version control:
   "ports_exposes": "8000",
   "environment_variables": {},
   "health_check_enabled": true,
-  "health_check_path": "/health/"
+  "health_check_path": "/django-coolify/health/"
 }
 ```
 
@@ -204,7 +204,7 @@ COOLIFY_API_TOKEN="your-secret-api-token-here"
 
 ## Health Check Endpoint
 
-Django Coolify automatically provides a `/health/` endpoint for application monitoring:
+Django Coolify automatically provides a `/django-coolify/health/` endpoint for application monitoring:
 
 ### Features
 - 🏥 **Comprehensive health checks** - Database, Django, and Python status
@@ -215,7 +215,7 @@ Django Coolify automatically provides a `/health/` endpoint for application moni
 ### Example Response
 
 ```bash
-curl http://localhost:8000/health/
+curl http://localhost:8000/django-coolify/health/
 ```
 
 ```json
@@ -304,7 +304,7 @@ The package automatically generates Docker-related files if they don't exist:
 
 ## Health Checks
 
-A health check endpoint is automatically added to your Django application at `/health/`. This endpoint returns a simple JSON response indicating the application status.
+A health check endpoint is automatically added to your Django application at `/django-coolify/health/`. This endpoint returns a simple JSON response indicating the application status.
 
 ## Environment Variables
 
