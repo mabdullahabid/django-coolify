@@ -4,7 +4,7 @@ Django management command to generate coolify.json configuration
 from django.core.management.base import BaseCommand, CommandError
 
 from django_coolify.config import CoolifyConfig
-from django_coolify.utils import ensure_docker_files, auto_configure_django_settings
+from django_coolify.utils import ensure_docker_files, auto_configure_django_settings, auto_configure_django_urls, ensure_gitignore_entries
 
 
 class Command(BaseCommand):
@@ -81,6 +81,16 @@ class Command(BaseCommand):
         else:
             self.stdout.write("✓ Django settings already configured")
         
+        # Auto-configure Django URLs for health endpoint
+        self.stdout.write("Auto-configuring Django URLs...")
+        urls_modified = auto_configure_django_urls()
+        if urls_modified:
+            self.stdout.write(
+                self.style.SUCCESS("✓ Django URLs updated to include health endpoint")
+            )
+        else:
+            self.stdout.write("✓ Django URLs already configured")
+        
         config_manager = CoolifyConfig()
         
         # Check if config already exists
@@ -145,8 +155,26 @@ class Command(BaseCommand):
                 )
             )
             
+            # Check if API token was provided and inform about .env file
+            if config.get('api_token'):
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"API token saved securely to {config_manager.env_path}"
+                    )
+                )
+            
         except ValueError as e:
             raise CommandError(f"Error saving configuration: {e}")
+        
+        # Update .gitignore to ensure .env is ignored
+        self.stdout.write("Updating .gitignore...")
+        gitignore_updated = ensure_gitignore_entries()
+        if gitignore_updated:
+            self.stdout.write(
+                self.style.SUCCESS("✓ .gitignore updated to exclude .env files")
+            )
+        else:
+            self.stdout.write("✓ .gitignore already configured")
         
         # Generate Docker files unless skipped
         if not options['skip_docker']:
@@ -155,9 +183,13 @@ class Command(BaseCommand):
         # Display next steps
         self.stdout.write("\nNext steps:")
         self.stdout.write("1. Review and edit the configuration file if needed")
+        if config.get('api_token'):
+            self.stdout.write("2. ⚠️  Your Coolify API token is stored in .env (keep this file secure!)")
+        else:
+            self.stdout.write("2. Add your Coolify API token to .env file: COOLIFY_API_TOKEN=your_token_here")
         if not options['skip_docker']:
-            self.stdout.write("2. Review the generated Docker files")
-            self.stdout.write("3. Run 'python manage.py setup-infra' to create project and application")
+            self.stdout.write("3. Review the generated Docker files")
+            self.stdout.write("4. Run 'python manage.py setup-infra' to create project and application")
             self.stdout.write("4. Commit your changes to git")
             self.stdout.write("5. Run 'python manage.py deploy' to deploy your application")
         else:

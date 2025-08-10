@@ -158,12 +158,14 @@ python manage.py set_domain --force  # Uses port from ports_exposes config
 
 ## Configuration
 
-The `coolify.json` file contains all the configuration for your deployment:
+Django Coolify uses a secure two-file configuration approach:
+
+### 1. `coolify.json` - Non-sensitive configuration
+Contains project settings that are safe to commit to version control:
 
 ```json
 {
   "coolify_url": "https://coolify.example.com",
-  "api_token": "your-api-token",
   "project_name": "my-django-project",
   "project_uuid": "generated-after-setup",
   "app_name": "my-django-app",
@@ -180,10 +182,63 @@ The `coolify.json` file contains all the configuration for your deployment:
 }
 ```
 
+### 2. `.env` - Sensitive configuration
+Contains API tokens and secrets (automatically added to .gitignore):
+
+```bash
+# Coolify Configuration
+COOLIFY_API_TOKEN="your-secret-api-token-here"
+```
+
+### Security Features
+
+- 🔒 **API tokens stored securely** in `.env` file
+- 📝 **Automatic .gitignore updates** to prevent accidental commits
+- 🚫 **Excluded from Docker builds** via .dockerignore  
+- ✅ **Safe public repository sharing** with coolify.json
+
 **Note on Domains**: Domains are automatically generated with port mapping (e.g., `:8000`) to ensure proper routing to your Django application. You can specify multiple domains separated by commas, and include paths or specific ports as needed:
 - `https://app.coolify.io:8000` - Maps to port 8000 inside the container
 - `https://app.coolify.io,https://cloud.coolify.io/dashboard` - Multiple domains with paths
 - `https://app.coolify.io/api/v3` - Domain with specific path
+
+## Health Check Endpoint
+
+Django Coolify automatically provides a `/health/` endpoint for application monitoring:
+
+### Features
+- 🏥 **Comprehensive health checks** - Database, Django, and Python status
+- 📊 **JSON response format** with detailed status information  
+- 🐳 **Docker integration** - Used by Docker HEALTHCHECK and Coolify monitoring
+- 🔄 **Automatic configuration** - URLs are auto-configured during setup
+
+### Example Response
+
+```bash
+curl http://localhost:8000/health/
+```
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-08-11T22:30:00Z",
+  "checks": {
+    "database": "connected",
+    "django": "ok (v5.2.5)",
+    "python": "ok (v3.12.0)"
+  },
+  "application": {
+    "name": "django-app",
+    "debug": false,
+    "django_version": "5.2.5", 
+    "python_version": "3.12.0"
+  }
+}
+```
+
+### HTTP Status Codes
+- **200 OK** - Application is healthy
+- **503 Service Unavailable** - Application has issues (check `checks` field for details)
 
 ## Django Settings for Production
 

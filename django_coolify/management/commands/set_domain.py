@@ -102,8 +102,12 @@ class Command(BaseCommand):
             # Remove port if present (e.g., "example.com:8000" -> "example.com")
             if ':' in domain_for_django:
                 domain_for_django = domain_for_django.split(':')[0]
-            client.set_environment_variable(app_uuid, 'ALLOWED_HOSTS', domain_for_django)
-            self.stdout.write(f"✓ Set ALLOWED_HOSTS environment variable: {domain_for_django}")
+            
+            # Include localhost and 0.0.0.0 for Docker and local development
+            allowed_hosts = f"{domain_for_django},localhost,0.0.0.0"
+            
+            client.set_environment_variable(app_uuid, 'ALLOWED_HOSTS', allowed_hosts)
+            self.stdout.write(f"✓ Set ALLOWED_HOSTS environment variable: {allowed_hosts}")
         except CoolifyAPIError as e:
             self.stdout.write(
                 self.style.WARNING(f"Warning: Could not set ALLOWED_HOSTS env var: {e}")

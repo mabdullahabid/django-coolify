@@ -10,11 +10,10 @@ from django.conf import settings
 
 
 class CoolifyConfig:
-    """Manages coolify.json configuration file"""
+    """Manages coolify.json configuration file and .env for sensitive data"""
     
     DEFAULT_CONFIG = {
         "coolify_url": "",
-        "api_token": "",
         "project_name": "",
         "project_uuid": "",
         "app_name": "",
@@ -29,6 +28,11 @@ class CoolifyConfig:
         "environment_variables": {},
         "health_check_enabled": False,
         "health_check_path": "/health/"
+    }
+    
+    # Sensitive fields that should be stored in .env file
+    SENSITIVE_FIELDS = {
+        "api_token": "COOLIFY_API_TOKEN"
     }
     
     def __init__(self, config_path: Optional[str] = None):
@@ -53,44 +57,136 @@ class CoolifyConfig:
             
             if manage_py_path:
                 self.config_path = manage_py_path / "coolify.json"
+                self.env_path = manage_py_path / ".env"
             else:
                 self.config_path = current_dir / "coolify.json"
+                self.env_path = current_dir / ".env"
+    
+    def load_env_vars(self) -> Dict[str, str]:
+        """
+        Load environment variables from .env file
+        
+        Returns:
+            Dictionary of environment variables
+        """
+        env_vars = {}
+        
+        if self.env_path.exists():
+            try:
+                with open(self.env_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            # Remove quotes if present
+                            value = value.strip('"\'')
+                            env_vars[key.strip()] = value
+            except IOError as e:
+                print(f"Warning: Error reading .env file {self.env_path}: {e}")
+        
+        return env_vars
+    
+    def save_env_vars(self, env_vars: Dict[str, str]) -> None:
+        """
+        Save environment variables to .env file
+        
+        Args:
+            env_vars: Dictionary of environment variables to save
+        """
+        try:
+            # Ensure directory exists
+            self.env_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Read existing .env content to preserve other variables
+            existing_content = []
+            coolify_vars = set(self.SENSITIVE_FIELDS.values())
+            
+            if self.env_path.exists():
+                with open(self.env_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Keep lines that are not Coolify-related
+                        if line and '=' in line:
+                            key = line.split('=', 1)[0].strip()
+                            if key not in coolify_vars:
+                                existing_content.append(line)
+                        elif line and (not line.strip() or line.startswith('#')):
+                            existing_content.append(line)
+            
+            # Write .env file
+            with open(self.env_path, 'w') as f:
+                # Write existing content first
+                if existing_content:
+                    f.write('\n'.join(existing_content))
+                    f.write('\n\n')
+                
+                # Write Coolify configuration header
+                f.write('# Coolify Configuration\n')
+                for key, value in env_vars.items():
+                    f.write(f'{key}="{value}"\n')
+                    
+        except IOError as e:
+            raise ValueError(f"Error writing .env file {self.env_path}: {e}")
     
     def load(self) -> Dict:
         """
-        Load configuration from file
+        Load configuration from file and environment variables
         
         Returns:
             Configuration dictionary
         """
+        # Load base config from coolify.json
+        config = self.DEFAULT_CONFIG.copy()
+        
         if self.config_path.exists():
             try:
                 with open(self.config_path, 'r') as f:
-                    config = json.load(f)
-                    # Merge with defaults to ensure all keys exist
-                    merged_config = self.DEFAULT_CONFIG.copy()
-                    merged_config.update(config)
-                    return merged_config
+                    file_config = json.load(f)
+                    config.update(file_config)
             except (json.JSONDecodeError, IOError) as e:
                 raise ValueError(f"Error reading config file {self.config_path}: {e}")
         
-        return self.DEFAULT_CONFIG.copy()
+        # Load sensitive data from .env file
+        env_vars = self.load_env_vars()
+        for field, env_key in self.SENSITIVE_FIELDS.items():
+            if env_key in env_vars:
+                config[field] = env_vars[env_key]
+            else:
+                config[field] = ""
+        
+        return config
     
     def save(self, config: Dict) -> None:
         """
-        Save configuration to file
+        Save configuration to files (non-sensitive to coolify.json, sensitive to .env)
         
         Args:
             config: Configuration dictionary to save
         """
+        # Separate sensitive and non-sensitive data
+        non_sensitive_config = {}
+        sensitive_env_vars = {}
+        
+        for key, value in config.items():
+            if key in self.SENSITIVE_FIELDS:
+                if value:  # Only save non-empty values
+                    env_key = self.SENSITIVE_FIELDS[key]
+                    sensitive_env_vars[env_key] = value
+            else:
+                non_sensitive_config[key] = value
+        
         try:
-            # Ensure directory exists
+            # Save non-sensitive config to coolify.json
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            
             with open(self.config_path, 'w') as f:
-                json.dump(config, f, indent=2, sort_keys=True)
+                json.dump(non_sensitive_config, f, indent=2, sort_keys=True)
+            
+            # Save sensitive data to .env
+            if sensitive_env_vars:
+                self.save_env_vars(sensitive_env_vars)
+                
         except IOError as e:
-            raise ValueError(f"Error writing config file {self.config_path}: {e}")
+            raise ValueError(f"Error writing config files: {e}")
     
     def exists(self) -> bool:
         """
